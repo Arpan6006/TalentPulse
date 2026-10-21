@@ -2,6 +2,7 @@
 
 > **An end-to-end, cost-sensitive Machine Learning & Data Engineering platform that moves beyond generic churn tutorials to quantify capital flight risk, optimize decision thresholds, enforce production data contracts, and provide plain-English root-cause explanations for executive decision-making.**
 
+[![CI Pipeline](https://github.com/Arpan6006/TalentPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/Arpan6006/TalentPulse/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB.svg?style=flat&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-FF4B4B.svg?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io)
@@ -191,10 +192,10 @@ Open your terminal or PowerShell and run:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/employee-attrition-prediction.git
+git clone https://github.com/Arpan6006/TalentPulse.git
 
 # 2. Navigate into the project folder
-cd employee-attrition-prediction
+cd TalentPulse
 
 # 3. Create a virtual environment
 python -m venv venv
@@ -231,7 +232,7 @@ streamlit run app/streamlit_app.py
 
 ### Step 3: Run the Production FastAPI Microservice
 
-In a new terminal window (with the virtual environment activated and inside `employee-attrition-prediction`):
+In a new terminal window (with the virtual environment activated and inside `TalentPulse`):
 
 ```bash
 uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
@@ -317,7 +318,7 @@ docker compose up --build
 ## 📂 Project Directory Structure
 
 ```text
-employee-attrition-prediction/
+TalentPulse/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                 # Automated CI pipeline (linting, tests, build verification)

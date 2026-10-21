@@ -1,5 +1,5 @@
 # HR Analytics & Attrition — SQL Business Insights Report
-**Source Dataset:** `C:\Users\Arpan\Downloads\ML Final Project\ML-DE Final Project\employee-attrition-prediction\data\raw\WA_Fn-UseC_-HR-Employee-Attrition.csv` (1,470 records)
+**Source Dataset:** `data/raw/WA_Fn-UseC_-HR-Employee-Attrition.csv` (1,470 records)
 **Generated via:** SQLite 3 in-memory engine with Window Functions & CTEs
 
 ---

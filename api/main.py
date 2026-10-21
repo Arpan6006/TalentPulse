@@ -52,6 +52,7 @@ def _resolve_asset_path(rel_path: str) -> str:
     candidates = [
         rel_path,
         os.path.join(PROJECT_ROOT, rel_path),
+        os.path.join(os.getcwd(), "TalentPulse", rel_path),
         os.path.join(os.getcwd(), "employee-attrition-prediction", rel_path),
     ]
     for c in candidates:

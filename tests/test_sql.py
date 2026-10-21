@@ -9,6 +9,7 @@ def sqlite_db():
     candidates = [
         os.path.join("data", "raw", "WA_Fn-UseC_-HR-Employee-Attrition.csv"),
         os.path.join(os.path.dirname(__file__), "..", "data", "raw", "WA_Fn-UseC_-HR-Employee-Attrition.csv"),
+        os.path.join(os.getcwd(), "TalentPulse", "data", "raw", "WA_Fn-UseC_-HR-Employee-Attrition.csv"),
         os.path.join(os.getcwd(), "employee-attrition-prediction", "data", "raw", "WA_Fn-UseC_-HR-Employee-Attrition.csv"),
     ]
     raw_path = None

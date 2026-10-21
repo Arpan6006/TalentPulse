@@ -3,7 +3,7 @@
 # ============================================================
 
 from typing import List, Dict, Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class EmployeeInput(BaseModel):
@@ -39,8 +39,8 @@ class EmployeeInput(BaseModel):
     YearsSinceLastPromotion: float = Field(1.0, ge=0, le=20, description="Years elapsed since previous promotion")
     YearsWithCurrManager: float = Field(2.0, ge=0, le=20, description="Years under reporting structure of current manager")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "Age": 32,
                 "BusinessTravel": "Travel_Rarely",
