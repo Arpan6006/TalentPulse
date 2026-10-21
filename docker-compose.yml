@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  # ── FastAPI REST Inference Microservice ───────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: talentpulse-api
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - talentpulse-net
+
+  # ── Streamlit Executive Intelligence Dashboard ────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: talentpulse-dashboard
+    command: streamlit run app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true --browser.gatherUsageStats=false
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_URL=http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - talentpulse-net
+
+networks:
+  talentpulse-net:
+    driver: bridge

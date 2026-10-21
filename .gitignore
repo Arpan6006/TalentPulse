@@ -1,0 +1,49 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# Unit test / coverage / caches
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Environment variables & secrets
+.env
+.env.local
+
+# Temporary / scratch scripts
+scratch/
