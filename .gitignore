@@ -43,7 +43,13 @@ ehthumbs.db
 
 # Environment variables & secrets
 .env
+.env.*
 .env.local
+*.pem
+*.key
+*.cert
+credentials.json
+secrets.json
 
 # Temporary / scratch scripts
 scratch/
