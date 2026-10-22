@@ -39,7 +39,6 @@ from src.data_validation import (
     validate_batch_dataframe,
     SCHEMA_CONTRACT
 )
-from src.drift_detection import compute_feature_drift
 
 # ──────────────────────────────────────────────────────────
 # Page Configuration
@@ -1031,7 +1030,7 @@ tab_single, tab_batch, tab_sql, tab_data_quality = st.tabs([
     "Individual Flight Risk Assessment", 
     "Batch Cohort Scoring (CSV)", 
     "Relational SQL Analytics",
-    "Data Quality & Drift Monitor"
+    "Data Quality & Contract Governance"
 ])
 
 
@@ -2029,177 +2028,98 @@ ORDER BY count DESC;"""
 
 
 # ══════════════════════════════════════════════════════════
-# TAB 4 — Data Quality Contracts & Population Drift Monitor
+# TAB 4 — Data Quality & Contract Governance
 # ══════════════════════════════════════════════════════════
 with tab_data_quality:
     st.markdown("""
     <div style="margin-bottom:18px;">
-        <h3 style="font-size:1.35rem;margin:0 0 4px 0;">Production Data Quality & Population Drift Monitor</h3>
+        <h3 style="font-size:1.35rem;margin:0 0 4px 0;">Production Data Quality & Schema Contract Governance</h3>
         <p style="color:#94a3b8;font-size:0.88rem;">
-            Enterprise ML systems degrade when input schemas drift or covariate distributions shift. 
-            This portal enforces strict data quality contracts and continuously monitors <strong>Population Stability Index (PSI)</strong> 
-            and <strong>Kolmogorov-Smirnov two-sample tests</strong> against calibrated training baselines.
+            Reliable machine learning depends on clean, contract-compliant data inputs. 
+            This module enforces rigorous 30-feature schema boundary contracts, outlier bounds clipping, 
+            and categorical normalization on both individual inferences and batch rosters.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    dq_subtab1, dq_subtab2 = st.tabs([
-        "Data Quality Contract & Schema Audit",
-        "Population Stability Index (PSI) & Drift Monitor"
-    ])
+    st.markdown("<h4 style='font-size:1.1rem;margin-bottom:6px;'>Formal Data Contract Specification</h4>", unsafe_allow_html=True)
+    st.caption("All incoming employee records must conform to these strict boundary invariants:")
 
-    with dq_subtab1:
-        st.markdown("<h4 style='font-size:1.1rem;margin-bottom:6px;'>Formal Data Contract Specification</h4>", unsafe_allow_html=True)
-        st.caption("All incoming production inferences and batch rosters must conform to these strict boundary invariants:")
-
-        contract_summary = []
-        for feat, spec in SCHEMA_CONTRACT.items():
-            if spec["type"] in ("numeric", "int"):
-                rule = f"Numeric range [{spec['min']}, {spec['max']}], default: {spec['default']}"
-            elif "allowed" in spec:
-                rule = f"Categorical enum ({len(spec['allowed'])} classes): {', '.join(spec['allowed'][:4])}..."
-            else:
-                rule = f"Default: {spec.get('default', 'N/A')}"
-            contract_summary.append({
-                "Feature Name": feat,
-                "Type": spec["type"].upper(),
-                "Validation Rule / Permitted Domain": rule,
-                "Imputation Strategy": "Median" if spec["type"] in ("numeric", "int") else "Mode"
-            })
-
-        st.dataframe(pd.DataFrame(contract_summary).head(10), use_container_width=True, hide_index=True)
-        st.caption("Showing 10 of 30 enforced schema contract rules. Expand below to inspect complete specification.")
-
-        with st.expander("View Complete 30-Feature Schema Contract"):
-            st.dataframe(pd.DataFrame(contract_summary), use_container_width=True, hide_index=True)
-
-        st.markdown("<div style='height:1px;background:rgba(255,255,255,0.06);margin:24px 0;'></div>", unsafe_allow_html=True)
-        st.markdown("<h4 style='font-size:1.1rem;margin-bottom:6px;'>Live Ingestion Quality Audit</h4>", unsafe_allow_html=True)
-
-        audit_source = st.radio(
-            "Select Dataset for Quality Contract Audit:",
-            ["Benchmark Historical Workforce (1,470 records)", "Upload New Production Batch CSV"],
-            horizontal=True
-        )
-
-        df_to_audit = None
-        if audit_source == "Benchmark Historical Workforce (1,470 records)":
-            raw_path = os.path.join("data", "raw", "WA_Fn-UseC_-HR-Employee-Attrition.csv")
-            if os.path.exists(raw_path):
-                df_to_audit = pd.read_csv(raw_path)
+    contract_summary = []
+    for feat, spec in SCHEMA_CONTRACT.items():
+        if spec["type"] in ("numeric", "int"):
+            rule = f"Numeric range [{spec['min']}, {spec['max']}], default: {spec['default']}"
+        elif "allowed" in spec:
+            rule = f"Categorical enum ({len(spec['allowed'])} classes): {', '.join(spec['allowed'][:4])}..."
         else:
-            up_audit = st.file_uploader("Upload Batch CSV for Audit", type=["csv"], key="audit_uploader")
-            if up_audit is not None:
-                try:
-                    df_to_audit = pd.read_csv(up_audit)
-                except Exception as e:
-                    st.error(f"Error reading uploaded CSV: {e}")
+            rule = f"Default: {spec.get('default', 'N/A')}"
+        contract_summary.append({
+            "Feature Name": feat,
+            "Type": spec["type"].upper(),
+            "Validation Rule / Permitted Domain": rule,
+            "Imputation Strategy": "Median" if spec["type"] in ("numeric", "int") else "Mode"
+        })
 
-        if df_to_audit is not None:
-            if st.button("Run Data Contract Audit", type="primary", key="btn_run_audit"):
-                with st.spinner("Auditing records against schema contracts …"):
-                    sanitized_df, report = validate_batch_dataframe(df_to_audit)
-                    is_valid = report.get("is_valid", report.get("is_production_ready", True))
+    st.dataframe(pd.DataFrame(contract_summary).head(10), use_container_width=True, hide_index=True)
+    st.caption("Showing 10 of 30 enforced schema contract rules. Expand below to inspect complete specification.")
 
-                st.markdown("<h4 style='margin-top:16px;'>Quality Scorecard</h4>", unsafe_allow_html=True)
-                q1, q2, q3, q4 = st.columns(4)
-                q1.metric("Ingested Records", f"{report.get('total_records', len(df_to_audit)):,}")
-                score = report.get("data_quality_score", report.get("quality_score_pct", 100.0))
-                q2.metric("Schema Conformance", f"{score:.1f}%")
-                flagged = report.get("flagged_records", 0)
-                q3.metric("Records Flagged", f"{flagged:,}")
-                clippings = report.get("total_boundary_clippings", sum(report.get("out_of_bounds_clipped", {}).values()))
-                q4.metric("Boundary Corrections", f"{clippings:,}")
+    with st.expander("View Complete 30-Feature Schema Contract"):
+        st.dataframe(pd.DataFrame(contract_summary), use_container_width=True, hide_index=True)
 
-                if score == 100.0:
-                    st.success("All records fully adhere to the enterprise schema contract. Zero anomalies detected.")
-                else:
-                    st.warning(f"Detected anomalies across {flagged} data points. Automatic bounds clipping and categorical normalization applied safely.")
+    st.markdown("<div style='height:1px;background:rgba(255,255,255,0.06);margin:24px 0;'></div>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:1.1rem;margin-bottom:6px;'>Live Ingestion Quality Audit</h4>", unsafe_allow_html=True)
 
-                with st.expander("Inspect Sanitized Dataset & Quality Audit Details"):
-                    st.dataframe(sanitized_df.head(25), use_container_width=True)
-                    col_a, col_b = st.columns(2)
-                    with col_a:
-                        if report.get("out_of_bounds_clipped"):
-                            st.write("**Boundary Outliers Clipped:**", report["out_of_bounds_clipped"])
-                        if report.get("null_imputations"):
-                            st.write("**Null Values Imputed:**", report["null_imputations"])
-                    with col_b:
-                        if report.get("invalid_categories_normalized"):
-                            st.write("**Invalid Categories Normalized:**", report["invalid_categories_normalized"])
-                        if report.get("missing_columns_synthesized"):
-                            st.write("**Missing Columns Synthesized:**", report["missing_columns_synthesized"])
+    audit_source = st.radio(
+        "Select Dataset for Quality Contract Audit:",
+        ["Benchmark Historical Workforce (1,470 records)", "Upload New Production Batch CSV"],
+        horizontal=True
+    )
 
-    with dq_subtab2:
-        st.markdown("<h4 style='font-size:1.1rem;margin-bottom:6px;'>Continuous Covariate Shift & Distribution Drift</h4>", unsafe_allow_html=True)
-        st.caption("Quantifies distribution change using Population Stability Index (PSI) and two-sample Kolmogorov-Smirnov tests.")
-
+    df_to_audit = None
+    if audit_source == "Benchmark Historical Workforce (1,470 records)":
         raw_path = os.path.join("data", "raw", "WA_Fn-UseC_-HR-Employee-Attrition.csv")
-        if not os.path.exists(raw_path):
-            st.error("Baseline dataset not found at data/raw/WA_Fn-UseC_-HR-Employee-Attrition.csv.")
-        else:
-            baseline_data = pd.read_csv(raw_path)
+        if os.path.exists(raw_path):
+            df_to_audit = pd.read_csv(raw_path)
+    else:
+        up_audit = st.file_uploader("Upload Batch CSV for Audit", type=["csv"], key="audit_uploader")
+        if up_audit is not None:
+            try:
+                df_to_audit = pd.read_csv(up_audit)
+            except Exception as e:
+                st.error(f"Error reading uploaded CSV: {e}")
 
-            drift_source = st.radio(
-                "Select Comparison Cohort:",
-                ["Benchmark Baseline (Self-Test)", "Simulated Stressed Cohort (Shifted Comp & Overtime)"],
-                horizontal=True
-            )
+    if df_to_audit is not None:
+        if st.button("Run Data Contract Audit", type="primary", key="btn_run_audit"):
+            with st.spinner("Auditing records against schema contracts …"):
+                sanitized_df, report = validate_batch_dataframe(df_to_audit)
+                is_valid = report.get("is_valid", report.get("is_production_ready", True))
 
-            if drift_source == "Benchmark Baseline (Self-Test)":
-                target_cohort = baseline_data.sample(n=min(500, len(baseline_data)), random_state=42)
+            st.markdown("<h4 style='margin-top:16px;'>Quality Scorecard</h4>", unsafe_allow_html=True)
+            q1, q2, q3, q4 = st.columns(4)
+            q1.metric("Ingested Records", f"{report.get('total_records', len(df_to_audit)):,}")
+            score = report.get("data_quality_score", report.get("quality_score_pct", 100.0))
+            q2.metric("Schema Conformance", f"{score:.1f}%")
+            flagged = report.get("flagged_records", 0)
+            q3.metric("Records Flagged", f"{flagged:,}")
+            clippings = report.get("total_boundary_clippings", sum(report.get("out_of_bounds_clipped", {}).values()))
+            q4.metric("Boundary Corrections", f"{clippings:,}")
+
+            if score == 100.0:
+                st.success("All records fully adhere to the enterprise schema contract. Zero anomalies detected.")
             else:
-                # Create a shifted cohort for demo
-                target_cohort = baseline_data.copy()
-                target_cohort["MonthlyIncome"] = target_cohort["MonthlyIncome"] * 1.35
-                target_cohort["OverTime"] = np.random.choice(["Yes", "No"], size=len(target_cohort), p=[0.7, 0.3])
+                st.warning(f"Detected anomalies across {flagged} data points. Automatic bounds clipping and categorical normalization applied safely.")
 
-            if st.button("Evaluate Population Drift (PSI)", type="primary", key="btn_run_drift"):
-                with st.spinner("Calculating Population Stability Index and statistical tests …"):
-                    drift_report = compute_feature_drift(baseline_data, target_cohort)
-
-                psi_score = drift_report["dataset_psi"]
-                drift_lvl = drift_report["drift_level"]
-                alert_badge = drift_report["alert_badge"]
-                rec = drift_report["recommendation"]
-
-                badge_color = "#10b981" if psi_score < 0.10 else ("#f59e0b" if psi_score < 0.20 else "#f43f5e")
-
-                st.markdown(f"""
-                <div style="background:rgba(18,24,38,0.75);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px;margin:18px 0;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div>
-                            <span style="font-size:0.72rem;font-weight:700;color:#818cf8;letter-spacing:0.06em;text-transform:uppercase;">MLOPS TELEMETRY</span>
-                            <h3 style="margin:4px 0 0 0;font-size:1.3rem;color:#ffffff;">Dataset Population Stability Index (PSI): <span style="color:{badge_color};">{psi_score:.4f}</span></h3>
-                        </div>
-                        <div style="padding:6px 14px;border-radius:9999px;font-size:0.76rem;font-weight:700;letter-spacing:0.05em;background:rgba(255,255,255,0.05);border:1px solid {badge_color};color:{badge_color};">
-                            {alert_badge}
-                        </div>
-                    </div>
-                    <div style="margin-top:12px;font-size:0.86rem;color:#cbd5e1;">
-                        <strong>Production Directive:</strong> {rec}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.markdown("#### Feature-Level Drift Telemetry")
-                feat_rows = []
-                for feat, met in drift_report["feature_metrics"].items():
-                    ks_val = met.get("ks_statistic")
-                    ks_str = f"{ks_val:.4f}" if ks_val is not None and not pd.isna(ks_val) else "—"
-                    p_val = met.get("ks_pvalue")
-                    p_str = f"{p_val:.4f}" if p_val is not None and not pd.isna(p_val) else "—"
-                    psi_val = met.get("psi", 0.0)
-                    psi_str = f"{psi_val:.4f}"
-
-                    feat_rows.append({
-                        "Feature": feat,
-                        "Type": met["type"].capitalize(),
-                        "PSI Score": psi_str,
-                        "KS Statistic": ks_str,
-                        "p-Value": p_str,
-                        "Stability Status": met["status"]
-                    })
-
-                st.dataframe(pd.DataFrame(feat_rows), use_container_width=True, hide_index=True)
+            with st.expander("Inspect Sanitized Dataset & Quality Audit Details"):
+                st.dataframe(sanitized_df.head(25), use_container_width=True)
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if report.get("out_of_bounds_clipped"):
+                        st.write("**Boundary Outliers Clipped:**", report["out_of_bounds_clipped"])
+                    if report.get("null_imputations"):
+                        st.write("**Null Values Imputed:**", report["null_imputations"])
+                with col_b:
+                    if report.get("invalid_categories_normalized"):
+                        st.write("**Invalid Categories Normalized:**", report["invalid_categories_normalized"])
+                    if report.get("missing_columns_synthesized"):
+                        st.write("**Missing Columns Synthesized:**", report["missing_columns_synthesized"])
 
